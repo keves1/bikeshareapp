@@ -7,6 +7,7 @@ from bokeh.layouts import column
 from bokeh.plotting import figure
 from bokeh.tile_providers import get_provider, Vendors
 from bokeh.models import GeoJSONDataSource
+from bokeh.palettes import viridis
 
 
 def latlon_to_mercator(lat, lon):
@@ -25,6 +26,17 @@ def latlon_to_mercator(lat, lon):
     return y, x
 
 
+def color(percent_full):
+    # scale percent_full to 1-256 and convert to int
+    # create list of 256 viridis colors
+    # pick the color correspondnig to percent full
+    idx = int(percent_full*255)
+    colors = viridis(256)
+    color = colors[idx]
+
+    return color
+
+
 def gbsf_to_geojson(stations):
     # convert data to geojson format
     geo_dict = {}
@@ -33,12 +45,18 @@ def gbsf_to_geojson(stations):
     for station in stations:
         station_dict = {}
         station.latitude, station.longitude = latlon_to_mercator(station.latitude, station.longitude)
+        if station.bikes == 0 and station.free == 0:
+            percent_full = 0
+        else:
+            percent_full = float(station.bikes)/float(station.bikes + station.free)
         station_dict['geometry'] = {'type': 'Point', 'coordinates': [station.longitude, station.latitude]}
         station_dict['type'] = 'Feature'
         station_dict['id'] = station.extra['uid']
         station_dict['properties'] = {'station name': station.name,
                                       'bikes': station.bikes,
-                                      'free': station.free}
+                                      'free': station.free,
+                                      'color': color(percent_full),
+                                      'size': (station.free + station.bikes)*0.5}
         geo_dict['features'].append(station_dict)
         geo_source = GeoJSONDataSource(geojson=json.dumps(geo_dict))
 
@@ -64,7 +82,7 @@ def make_map():
 
     geo_data = get_data()
 
-    p.circle(x='x', y='y', size=5, color='green', alpha=0.8, source=geo_data)
+    p.circle(x='x', y='y', size='size', color='color', alpha=0.6, source=geo_data)
 
     return p
 
