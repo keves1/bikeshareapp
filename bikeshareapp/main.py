@@ -6,7 +6,7 @@ from bokeh.io import curdoc
 from bokeh.layouts import column
 from bokeh.plotting import figure
 from bokeh.tile_providers import get_provider, Vendors
-from bokeh.models import GeoJSONDataSource
+from bokeh.models import GeoJSONDataSource, ColorBar, LinearColorMapper, Label
 from bokeh.palettes import viridis
 
 
@@ -27,9 +27,6 @@ def latlon_to_mercator(lat, lon):
 
 
 def color(percent_full):
-    # scale percent_full to 1-256 and convert to int
-    # create list of 256 viridis colors
-    # pick the color correspondnig to percent full
     idx = int(percent_full*255)
     colors = viridis(256)
     color = colors[idx]
@@ -76,13 +73,30 @@ def get_data():
 def make_map():
     tile_provider = get_provider(Vendors.STAMEN_TERRAIN_RETINA)
 
-    p = figure(x_range=(-8596413.91, -8558195.48), y_range=(4724114.13, 4696902.60),
-               x_axis_type="mercator", y_axis_type="mercator")
-    p.add_tile(tile_provider)
-
     geo_data = get_data()
 
-    p.circle(x='x', y='y', size='size', color='color', alpha=0.6, source=geo_data)
+    TOOLTIPS = [
+        ('bikes available', '@bikes'),
+    ]
+
+    p = figure(x_range=(-8596413.91, -8558195.48), y_range=(4724114.13, 4696902.60),
+               x_axis_type="mercator", y_axis_type="mercator", width=1200, height=700, tooltips=TOOLTIPS)
+    p.add_tile(tile_provider)
+    p.xaxis.visible = False
+    p.yaxis.visible = False
+
+    p.circle(x='x', y='y', size='size', color='color', alpha=0.7, source=geo_data)
+
+    color_bar_palette = viridis(256)
+    color_mapper = LinearColorMapper(palette=color_bar_palette, low=0, high=100)
+    color_bar = ColorBar(color_mapper=color_mapper, background_fill_alpha=0.7, title='% Full',
+                         title_text_align='left', title_standoff=10)
+    p.add_layout(color_bar)
+
+    label = Label(x=820, y=665, x_units='screen', y_units='screen',
+                  text='Dot size represents total docks in station', render_mode='css',
+                  border_line_color=None, background_fill_color='white', background_fill_alpha=0.7)
+    p.add_layout(label)
 
     return p
 
