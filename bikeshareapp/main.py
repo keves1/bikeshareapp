@@ -55,9 +55,9 @@ def gbsf_to_geojson(stations):
                                       'color': color(percent_full),
                                       'size': (station.free + station.bikes)*0.5}
         geo_dict['features'].append(station_dict)
-        geo_source = GeoJSONDataSource(geojson=json.dumps(geo_dict))
+        geo_json = json.dumps(geo_dict)
 
-    return geo_source
+    return geo_json
 
 
 def get_data():
@@ -70,10 +70,10 @@ def get_data():
     return geo_data
 
 
-def make_map():
+def make_map(source):
     tile_provider = get_provider(Vendors.STAMEN_TERRAIN_RETINA)
 
-    geo_data = get_data()
+    geo_data = source
 
     TOOLTIPS = [
         ('bikes available', '@bikes'),
@@ -101,5 +101,13 @@ def make_map():
     return p
 
 
-fig = make_map()
+def update():
+    geo_json = get_data()
+    source.update(geojson=geo_json)
+
+
+source = get_data()
+source = GeoJSONDataSource(geojson=source)
+fig = make_map(source)
 curdoc().add_root(column(fig))
+curdoc().add_periodic_callback(update, 120000)
