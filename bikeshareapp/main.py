@@ -11,13 +11,17 @@ from bokeh.palettes import viridis
 
 
 def latlon_to_mercator(lat, lon):
+    """Converts latitude/longitude coordinates from decimal degrees to web mercator format.
+
+    Derived from the Java version shown here: http://wiki.openstreetmap.org/wiki/Mercator
+
+    Args:
+        lat: latitude in decimal degrees format.
+        lon: longitude in decimal degrees format.
+
+    Returns:
+        Latitude (y) and longitude (x) as floats.
     """
-        Converts coordinates from latitude/longitude to web mercator coordinates
-        Derived from the Java version shown here: http://wiki.openstreetmap.org/wiki/Mercator
-        :param lat:
-        :param lon:
-        :return:
-        """
 
     radius = 6378137.0
     x = math.radians(lon) * radius
@@ -27,6 +31,15 @@ def latlon_to_mercator(lat, lon):
 
 
 def color(percent_full):
+    """Returns a color from the Viridis256 palette corresponding to how full a station is.
+
+    Args:
+        percent_full: A value between 0-1 indicating percent full status of a station
+
+    Returns:
+        Color from the Viridis256 palette as a hex code string
+
+    """
     idx = int(percent_full*255)
     colors = viridis(256)
     color = colors[idx]
@@ -34,8 +47,15 @@ def color(percent_full):
     return color
 
 
-def gbsf_to_geojson(stations):
-    # convert data to geojson format
+def gbfs_to_geojson(stations):
+    """Converts General Bikeshare Feed Specification (GBFS) data to GeoJSON format.
+
+    Args:
+        stations: A list of GbfsStation objects.
+
+    Returns:
+        A json string containing GeoJSON-formatted data for each station
+    """
     geo_dict = {}
     geo_dict['type'] = 'FeatureCollection'
     geo_dict['features'] = []
@@ -61,19 +81,28 @@ def gbsf_to_geojson(stations):
 
 
 def get_data():
-    # get data in GBSF format
+    """Pulls bikeshare data from the web using the Pybikes API.
+
+    Returns:
+        A json string containing GeoJSON-formatted data for each station
+    """
     capital = pybikes.get('capital-bikeshare')
     capital.update()
     stations = capital.stations
-    geo_data = gbsf_to_geojson(stations)
+    geo_data = gbfs_to_geojson(stations)
 
     return geo_data
 
 
 def make_map(source):
-    tile_provider = get_provider(Vendors.STAMEN_TERRAIN_RETINA)
+    """Creates a Bokeh figure displaying the source data on a map
 
-    geo_data = source
+    Args:
+        source: A GeoJSONDataSource object containing bike data
+
+    Returns: A Bokeh figure with a map displaying the data
+    """
+    tile_provider = get_provider(Vendors.STAMEN_TERRAIN_RETINA)
 
     TOOLTIPS = [
         ('bikes available', '@bikes'),
@@ -85,7 +114,7 @@ def make_map(source):
     p.xaxis.visible = False
     p.yaxis.visible = False
 
-    p.circle(x='x', y='y', size='size', color='color', alpha=0.7, source=geo_data)
+    p.circle(x='x', y='y', size='size', color='color', alpha=0.7, source=source)
 
     color_bar_palette = viridis(256)
     color_mapper = LinearColorMapper(palette=color_bar_palette, low=0, high=100)
